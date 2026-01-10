@@ -1,20 +1,63 @@
 """Configuration settings for UniFi MCP Server."""
 
+import json
+import logging
 from typing import Literal
 
-from pydantic import Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+
+class UniFiDevice(BaseModel):
+    """Configuration for a single UniFi device."""
+
+    name: str = Field(description="Friendly name for the device")
+    url: str = Field(description="Base URL of the device (e.g., https://10.1.3.1)")
+    api_key: str = Field(description="API key for the device")
+    services: list[Literal["network", "protect"]] = Field(
+        default=["network"],
+        description="Services available on this device",
+    )
+    site: str = Field(
+        default="default",
+        description="Site name for network operations",
+    )
+    verify_ssl: bool = Field(
+        default=False,
+        description="Verify SSL certificates",
+    )
+
+    @property
+    def network_api_base(self) -> str:
+        """Get the Network Integration API base URL."""
+        return f"{self.url.rstrip('/')}/proxy/network/integration"
+
+    @property
+    def protect_api_base(self) -> str:
+        """Get the Protect Integration API base URL."""
+        return f"{self.url.rstrip('/')}/proxy/protect/integration/v1"
+
+    @property
+    def has_network(self) -> bool:
+        """Check if device has Network service."""
+        return "network" in self.services
+
+    @property
+    def has_protect(self) -> bool:
+        """Check if device has Protect service."""
+        return "protect" in self.services
 
 
 class UniFiSettings(BaseSettings):
     """UniFi MCP Server configuration.
 
-    Settings can be configured via environment variables with UNIFI_ prefix.
+    Supports multiple UniFi devices with different services.
 
-    Supported modes:
-    - local: Session-based auth with username/password (traditional)
-    - local_api_key: UniFi OS Integration API with API key (recommended for UCG/UDM)
-    - cloud: Ubiquiti Cloud API (api.ui.com)
+    Configuration can be done via:
+    1. UNIFI_DEVICES JSON array (recommended for multiple devices)
+    2. Legacy single-device env vars (UNIFI_CONTROLLER_URL, UNIFI_CLOUD_API_KEY, etc.)
     """
 
     model_config = SettingsConfigDict(
@@ -24,101 +67,153 @@ class UniFiSettings(BaseSettings):
         extra="ignore",
     )
 
-    # Connection mode
+    # Multi-device configuration (JSON array)
+    devices_json: str | None = Field(
+        default=None,
+        validation_alias="UNIFI_DEVICES",
+        description="JSON array of device configurations",
+    )
+
+    # Legacy single-device settings (for backwards compatibility)
     mode: Literal["local", "local_api_key", "cloud"] = Field(
         default="local_api_key",
-        description="Connection mode: 'local' for session auth, 'local_api_key' for Integration API, 'cloud' for api.ui.com",
+        description="Connection mode for legacy single-device config",
     )
-
-    # Local controller settings
     controller_url: str | None = Field(
         default=None,
-        description="URL of the UniFi controller (e.g., https://192.168.1.1)",
+        description="URL of the UniFi controller",
     )
-    username: str | None = Field(
-        default=None,
-        description="Username for local controller authentication",
-    )
-    password: str | None = Field(
-        default=None,
-        description="Password for local controller authentication",
-    )
-    site: str = Field(
-        default="default",
-        description="UniFi site name (use 'default' for single-site setups)",
-    )
-    verify_ssl: bool = Field(
-        default=False,
-        description="Verify SSL certificates (set False for self-signed certs)",
-    )
-    is_udm: bool = Field(
-        default=True,
-        description="True for UniFi OS devices (UDM, UCG), False for traditional controller",
-    )
-
-    # Cloud API settings
     cloud_api_key: str | None = Field(
         default=None,
-        description="API key for Ubiquiti Cloud API (api.ui.com)",
+        description="API key for the device",
     )
+    username: str | None = Field(default=None)
+    password: str | None = Field(default=None)
+    site: str = Field(default="default")
+    verify_ssl: bool = Field(default=False)
+    is_udm: bool = Field(default=True)
 
     # Performance settings
-    request_timeout: float = Field(
-        default=30.0,
-        description="HTTP request timeout in seconds",
-    )
-    max_connections: int = Field(
-        default=10,
-        description="Maximum number of HTTP connections",
-    )
-    cache_ttl: int = Field(
-        default=30,
-        description="Default cache TTL in seconds",
+    request_timeout: float = Field(default=30.0)
+    max_connections: int = Field(default=10)
+    cache_ttl: int = Field(default=30)
+
+    # Default device name for legacy config
+    default_device_name: str = Field(
+        default="default",
+        description="Name for the default device when using legacy config",
     )
 
+    _devices: list[UniFiDevice] | None = None
+
+    @field_validator("devices_json", mode="before")
+    @classmethod
+    def parse_devices_json(cls, v):
+        """Parse devices JSON if provided as string."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            # Strip leading/trailing quotes that might be included from .env
+            v = v.strip()
+            if (v.startswith("'") and v.endswith("'")) or (v.startswith('"') and v.endswith('"')):
+                v = v[1:-1]
+            return v
+        if isinstance(v, list):
+            return json.dumps(v)
+        return v
+
+    @property
+    def devices(self) -> list[UniFiDevice]:
+        """Get list of configured devices."""
+        if self._devices is not None:
+            return self._devices
+
+        devices = []
+
+        # Parse multi-device JSON config
+        if self.devices_json:
+            try:
+                devices_data = json.loads(self.devices_json)
+                for d in devices_data:
+                    devices.append(UniFiDevice(**d))
+                logger.info(f"Loaded {len(devices)} devices from UNIFI_DEVICES config")
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.error(f"Failed to parse UNIFI_DEVICES: {e}")
+
+        # Fall back to legacy single-device config
+        if not devices and self.controller_url and self.cloud_api_key:
+            devices.append(
+                UniFiDevice(
+                    name=self.default_device_name,
+                    url=self.controller_url,
+                    api_key=self.cloud_api_key,
+                    services=["network"],  # Legacy config only supported network
+                    site=self.site,
+                    verify_ssl=self.verify_ssl,
+                )
+            )
+            logger.info(f"Using legacy single-device config: {self.controller_url}")
+
+        self._devices = devices
+        return devices
+
+    def get_device(self, name: str | None = None) -> UniFiDevice | None:
+        """Get a device by name.
+
+        Args:
+            name: Device name. If None, returns the first device.
+
+        Returns:
+            UniFiDevice or None if not found.
+        """
+        if not self.devices:
+            return None
+
+        if name is None:
+            return self.devices[0]
+
+        for device in self.devices:
+            if device.name.lower() == name.lower():
+                return device
+
+        return None
+
+    def get_network_devices(self) -> list[UniFiDevice]:
+        """Get all devices with Network service."""
+        return [d for d in self.devices if d.has_network]
+
+    def get_protect_devices(self) -> list[UniFiDevice]:
+        """Get all devices with Protect service."""
+        return [d for d in self.devices if d.has_protect]
+
+    def get_device_names(self) -> list[str]:
+        """Get list of all device names."""
+        return [d.name for d in self.devices]
+
+    # Legacy compatibility properties
     @property
     def api_base_url(self) -> str:
-        """Get the base URL for API requests."""
+        """Get the base URL for API requests (legacy compatibility)."""
+        device = self.get_device()
+        if device:
+            return device.network_api_base
+
         if self.mode == "cloud":
             return "https://api.ui.com"
 
         if not self.controller_url:
-            raise ValueError("controller_url is required for local/local_api_key mode")
+            raise ValueError("No device configured")
 
         base = self.controller_url.rstrip("/")
-
-        # local_api_key mode uses the Integration API
         if self.mode == "local_api_key":
             return f"{base}/proxy/network/integration"
-
-        # Traditional local mode
         if self.is_udm:
             return f"{base}/proxy/network"
-
         return base
 
     @property
-    def auth_url(self) -> str:
-        """Get the authentication URL."""
-        if self.mode in ("cloud", "local_api_key"):
-            # API key modes don't use auth URL
-            return ""
-
-        if not self.controller_url:
-            raise ValueError("controller_url is required for local mode")
-
-        base = self.controller_url.rstrip("/")
-
-        # UniFi OS uses different auth endpoint
-        if self.is_udm:
-            return f"{base}/api/auth/login"
-
-        # Traditional controller
-        return f"{base}/api/login"
-
-    @property
     def uses_api_key(self) -> bool:
-        """Check if the current mode uses API key authentication."""
+        """Check if using API key authentication."""
         return self.mode in ("cloud", "local_api_key")
 
 

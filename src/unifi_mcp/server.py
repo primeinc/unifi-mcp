@@ -6,11 +6,13 @@ import sys
 from mcp.server.fastmcp import FastMCP
 
 from unifi_mcp.clients.base import create_app_lifespan
+from unifi_mcp.config import settings
 from unifi_mcp.tools.network import clients as client_tools
 from unifi_mcp.tools.network import devices as device_tools
 from unifi_mcp.tools.network import insights as insight_tools
 from unifi_mcp.tools.network import sites as site_tools
 from unifi_mcp.tools.network import stats as stat_tools
+from unifi_mcp.tools.protect import cameras as protect_tools
 
 # Configure logging
 logging.basicConfig(
@@ -24,7 +26,7 @@ logger = logging.getLogger(__name__)
 mcp = FastMCP(
     name="UniFi MCP Server",
     instructions="""
-    Manage and analyze UniFi network infrastructure.
+    Manage and analyze UniFi network and Protect infrastructure.
 
     This server provides tools for:
     - Device management (APs, switches, routers)
@@ -32,6 +34,10 @@ mcp = FastMCP(
     - Site and network configuration
     - Network statistics and monitoring
     - AI-powered network analysis and troubleshooting
+    - UniFi Protect camera management and snapshots
+
+    Supports multiple UniFi devices. Use list_unifi_devices to see configured devices.
+    Use the 'device' parameter to target specific devices when you have multiple.
 
     Use the insight tools (analyze_network_issues, get_optimization_recommendations, etc.)
     for comprehensive network analysis and recommendations.
@@ -322,9 +328,105 @@ async def troubleshoot_client(ctx, mac: str, site: str = "default"):
     return await insight_tools.troubleshoot_client(ctx, mac, site)
 
 
+# =============================================================================
+# UniFi Protect Tools
+# =============================================================================
+
+
+@mcp.tool()
+async def list_cameras(ctx, device: str | None = None):
+    """List all UniFi Protect cameras with status."""
+    return await protect_tools.list_cameras(ctx, device)
+
+
+@mcp.tool()
+async def get_camera_details(ctx, camera_id: str, device: str | None = None):
+    """Get detailed information about a specific camera."""
+    return await protect_tools.get_camera_details(ctx, camera_id, device)
+
+
+@mcp.tool()
+async def get_camera_snapshot(
+    ctx,
+    camera_id: str,
+    device: str | None = None,
+    width: int | None = None,
+    height: int | None = None,
+):
+    """
+    Get a snapshot from a camera.
+
+    Returns a base64-encoded JPEG image.
+    """
+    return await protect_tools.get_camera_snapshot(ctx, camera_id, device, width, height)
+
+
+@mcp.tool()
+async def get_protect_system_info(ctx, device: str | None = None):
+    """Get UniFi Protect system information including camera and accessory counts."""
+    return await protect_tools.get_protect_system_info(ctx, device)
+
+
+@mcp.tool()
+async def get_camera_health_summary(ctx, device: str | None = None):
+    """
+    Get a health summary of all cameras.
+
+    Provides an overview of camera status, connectivity, and potential issues.
+    """
+    return await protect_tools.get_camera_health_summary(ctx, device)
+
+
+@mcp.tool()
+async def get_liveviews(ctx, device: str | None = None):
+    """Get all configured Protect liveviews."""
+    return await protect_tools.get_liveviews(ctx, device)
+
+
+@mcp.tool()
+async def get_protect_accessories(ctx, device: str | None = None):
+    """Get all Protect accessories (lights, sensors, chimes, viewers)."""
+    return await protect_tools.get_protect_accessories(ctx, device)
+
+
+# =============================================================================
+# Multi-Device Management Tools
+# =============================================================================
+
+
+@mcp.tool()
+async def list_unifi_devices(ctx):
+    """
+    List all configured UniFi devices.
+
+    Shows device names, URLs, and available services (network, protect).
+    Use the device name with other tools to target specific devices.
+    """
+    devices = settings.devices
+    return {
+        "total_devices": len(devices),
+        "devices": [
+            {
+                "name": d.name,
+                "url": d.url,
+                "services": d.services,
+                "site": d.site,
+            }
+            for d in devices
+        ],
+        "network_devices": [d.name for d in settings.get_network_devices()],
+        "protect_devices": [d.name for d in settings.get_protect_devices()],
+    }
+
+
 def main():
     """Run the MCP server."""
     logger.info("Starting UniFi MCP Server")
+    device_count = len(settings.devices)
+    if device_count > 0:
+        logger.info(f"Configured devices: {settings.get_device_names()}")
+    else:
+        logger.warning("No devices configured!")
     mcp.run()
 
 

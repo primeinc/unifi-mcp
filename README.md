@@ -86,6 +86,10 @@ UNIFI_VERIFY_SSL=false
 | `services` | Array: `["network"]`, `["protect"]`, or both | `["network"]` |
 | `site` | Site name for network operations | `"default"` |
 | `verify_ssl` | Verify SSL certificates | `false` |
+| `username` | Username for Protect events (optional) | `null` |
+| `password` | Password for Protect events (optional) | `null` |
+
+**Note:** The `username` and `password` fields are only required for Protect event tools (motion events, smart detections). Basic camera operations work with just the API key.
 
 To create an API key:
 1. Log into your UniFi controller
@@ -216,6 +220,12 @@ claude mcp add unifi -- uv run --directory /path/to/Unifi-mcp python -m unifi_mc
 - `get_liveviews` - Get configured liveview layouts
 - `get_protect_accessories` - List lights, sensors, chimes, viewers
 
+### UniFi Protect Events (require username/password)
+- `get_motion_events` - Get recent motion events
+- `get_smart_detections` - Get smart detection events (person, vehicle, animal, package)
+- `get_protect_event_summary` - Summary of all events by type
+- `get_recent_protect_activity` - Quick overview of recent activity
+
 ## Example Conversations
 
 After connecting the MCP server, you can ask Claude:
@@ -239,6 +249,13 @@ After connecting the MCP server, you can ask Claude:
 - "What's the status of my NVR?"
 - "Are any cameras disconnected?"
 - "Show me the protect accessories"
+
+### Protect Events (requires credentials)
+- "Show me recent motion events"
+- "What smart detections happened in the last 24 hours?"
+- "Were there any person detections today?"
+- "Give me an event summary for the past week"
+- "Show recent activity from the Front Door camera"
 
 ### Multi-Device
 - "List my configured UniFi devices"

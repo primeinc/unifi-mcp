@@ -281,3 +281,184 @@ async def get_protect_accessories(
             "total_viewers": len(viewers),
         },
     }
+
+
+# =============================================================================
+# Event Tools (require username/password credentials)
+# =============================================================================
+
+
+async def get_motion_events(
+    ctx: Context,
+    hours: int = 24,
+    limit: int = 50,
+    camera_id: str | None = None,
+    device: str | None = None,
+) -> dict[str, Any]:
+    """Get recent motion events from cameras.
+
+    Requires username and password to be configured for the device.
+
+    Args:
+        ctx: MCP context
+        hours: Number of hours to look back (default: 24)
+        limit: Maximum number of events (default: 50)
+        camera_id: Filter to specific camera ID or name (optional)
+        device: Device name (optional)
+
+    Returns:
+        Motion events with camera names and timestamps
+    """
+    client = _get_protect_client(ctx, device)
+
+    # If camera_id looks like a name, resolve it
+    actual_camera_id = camera_id
+    if camera_id and not camera_id.startswith("5"):  # UUIDs typically start with hex
+        try:
+            camera = await client.get_camera_by_name(camera_id)
+            actual_camera_id = camera.get("id")
+        except UniFiNotFoundError:
+            pass  # Use as-is, might be an ID
+
+    events = await client.get_motion_events(hours=hours, limit=limit, camera_id=actual_camera_id)
+
+    # Get camera names
+    cameras = await client.get_cameras()
+    camera_names = {c.get("id"): c.get("name") for c in cameras}
+
+    # Format events
+    formatted = []
+    for event in events:
+        cam_id = event.get("camera")
+        event_time = event.get("start", event.get("timestamp", 0))
+
+        if event_time:
+            from datetime import datetime
+            dt = datetime.fromtimestamp(event_time / 1000)
+            time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            time_str = "Unknown"
+
+        formatted.append({
+            "camera": camera_names.get(cam_id, cam_id),
+            "time": time_str,
+            "type": event.get("type"),
+            "score": event.get("score"),
+        })
+
+    return {
+        "period_hours": hours,
+        "total_events": len(formatted),
+        "events": formatted,
+    }
+
+
+async def get_smart_detections(
+    ctx: Context,
+    hours: int = 24,
+    limit: int = 50,
+    detection_type: str | None = None,
+    device: str | None = None,
+) -> dict[str, Any]:
+    """Get smart detection events (person, vehicle, animal, package).
+
+    Requires username and password to be configured for the device.
+
+    Args:
+        ctx: MCP context
+        hours: Number of hours to look back (default: 24)
+        limit: Maximum number of events (default: 50)
+        detection_type: Filter by type: person, vehicle, animal, package (optional)
+        device: Device name (optional)
+
+    Returns:
+        Smart detection events with details
+    """
+    client = _get_protect_client(ctx, device)
+
+    detection_types = [detection_type] if detection_type else None
+    events = await client.get_smart_detection_events(
+        hours=hours,
+        limit=limit,
+        detection_types=detection_types,
+    )
+
+    # Get camera names
+    cameras = await client.get_cameras()
+    camera_names = {c.get("id"): c.get("name") for c in cameras}
+
+    # Format events
+    formatted = []
+    for event in events:
+        cam_id = event.get("camera")
+        event_time = event.get("start", event.get("timestamp", 0))
+
+        if event_time:
+            from datetime import datetime
+            dt = datetime.fromtimestamp(event_time / 1000)
+            time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            time_str = "Unknown"
+
+        formatted.append({
+            "camera": camera_names.get(cam_id, cam_id),
+            "time": time_str,
+            "detections": event.get("smartDetectTypes", []),
+            "score": event.get("score"),
+        })
+
+    return {
+        "period_hours": hours,
+        "filter": detection_type or "all",
+        "total_events": len(formatted),
+        "events": formatted,
+    }
+
+
+async def get_event_summary(
+    ctx: Context,
+    hours: int = 24,
+    device: str | None = None,
+) -> dict[str, Any]:
+    """Get a summary of all Protect events for the time period.
+
+    Provides an overview of motion, smart detections, and doorbell activity.
+    Requires username and password to be configured for the device.
+
+    Args:
+        ctx: MCP context
+        hours: Number of hours to look back (default: 24)
+        device: Device name (optional)
+
+    Returns:
+        Event summary with counts by type and camera activity
+    """
+    client = _get_protect_client(ctx, device)
+    return await client.get_event_summary(hours=hours)
+
+
+async def get_recent_activity(
+    ctx: Context,
+    limit: int = 20,
+    device: str | None = None,
+) -> dict[str, Any]:
+    """Get recent activity across all cameras.
+
+    Provides a quick overview of the most recent events.
+    Requires username and password to be configured for the device.
+
+    Args:
+        ctx: MCP context
+        limit: Maximum number of events (default: 20)
+        device: Device name (optional)
+
+    Returns:
+        List of recent events with camera names and timestamps
+    """
+    client = _get_protect_client(ctx, device)
+    events = await client.get_recent_activity(limit=limit)
+
+    return {
+        "total_events": len(events),
+        "events": events,
+    }

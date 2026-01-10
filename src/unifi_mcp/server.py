@@ -390,6 +390,65 @@ async def get_protect_accessories(ctx, device: str | None = None):
 
 
 # =============================================================================
+# UniFi Protect Event Tools (require username/password)
+# =============================================================================
+
+
+@mcp.tool()
+async def get_motion_events(
+    ctx,
+    hours: int = 24,
+    limit: int = 50,
+    camera_id: str | None = None,
+    device: str | None = None,
+):
+    """
+    Get recent motion events from cameras.
+
+    Requires username and password configured for the Protect device.
+    """
+    return await protect_tools.get_motion_events(ctx, hours, limit, camera_id, device)
+
+
+@mcp.tool()
+async def get_smart_detections(
+    ctx,
+    hours: int = 24,
+    limit: int = 50,
+    detection_type: str | None = None,
+    device: str | None = None,
+):
+    """
+    Get smart detection events (person, vehicle, animal, package).
+
+    Requires username and password configured for the Protect device.
+    """
+    return await protect_tools.get_smart_detections(ctx, hours, limit, detection_type, device)
+
+
+@mcp.tool()
+async def get_protect_event_summary(ctx, hours: int = 24, device: str | None = None):
+    """
+    Get a summary of all Protect events for the time period.
+
+    Shows motion count, smart detections breakdown, and doorbell activity.
+    Requires username and password configured for the Protect device.
+    """
+    return await protect_tools.get_event_summary(ctx, hours, device)
+
+
+@mcp.tool()
+async def get_recent_protect_activity(ctx, limit: int = 20, device: str | None = None):
+    """
+    Get recent activity across all cameras.
+
+    Provides a quick overview of the most recent events.
+    Requires username and password configured for the Protect device.
+    """
+    return await protect_tools.get_recent_activity(ctx, limit, device)
+
+
+# =============================================================================
 # Multi-Device Management Tools
 # =============================================================================
 

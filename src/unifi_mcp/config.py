@@ -28,6 +28,15 @@ class UniFiDevice(BaseModel):
         default=False,
         description="Verify SSL certificates",
     )
+    # Optional credentials for full Protect API access (events, recordings)
+    username: str | None = Field(
+        default=None,
+        description="Username for session auth (required for Protect events)",
+    )
+    password: str | None = Field(
+        default=None,
+        description="Password for session auth (required for Protect events)",
+    )
 
     @property
     def network_api_base(self) -> str:
@@ -40,6 +49,11 @@ class UniFiDevice(BaseModel):
         return f"{self.url.rstrip('/')}/proxy/protect/integration/v1"
 
     @property
+    def protect_internal_api_base(self) -> str:
+        """Get the internal Protect API base URL (for events/recordings)."""
+        return f"{self.url.rstrip('/')}/proxy/protect/api"
+
+    @property
     def has_network(self) -> bool:
         """Check if device has Network service."""
         return "network" in self.services
@@ -48,6 +62,11 @@ class UniFiDevice(BaseModel):
     def has_protect(self) -> bool:
         """Check if device has Protect service."""
         return "protect" in self.services
+
+    @property
+    def has_protect_credentials(self) -> bool:
+        """Check if device has credentials for full Protect API access."""
+        return bool(self.username and self.password)
 
 
 class UniFiSettings(BaseSettings):

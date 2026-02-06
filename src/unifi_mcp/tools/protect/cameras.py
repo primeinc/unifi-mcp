@@ -462,3 +462,73 @@ async def get_recent_activity(
         "total_events": len(events),
         "events": events,
     }
+
+
+# =============================================================================
+# Event Media Tools (require username/password credentials)
+# =============================================================================
+
+
+async def get_event_thumbnail(
+    ctx: Context,
+    event_id: str,
+    device: str | None = None,
+) -> dict[str, Any]:
+    """Get thumbnail image for a specific event.
+
+    Returns the snapshot captured at the moment of the event (motion, smart detection, etc.).
+
+    Requires username and password to be configured for the device.
+
+    Args:
+        ctx: MCP context
+        event_id: Event ID (from get_motion_events, get_smart_detections, etc.)
+        device: Device name (optional)
+
+    Returns:
+        Dictionary with base64-encoded JPEG thumbnail and metadata
+    """
+    client = _get_protect_client(ctx, device)
+    image_base64 = await client.get_event_thumbnail_base64(event_id)
+
+    return {
+        "success": True,
+        "event_id": event_id,
+        "image_base64": image_base64,
+        "image_format": "jpeg",
+        "note": "Thumbnail captured at the moment of the event. Image is base64-encoded JPEG.",
+    }
+
+
+async def get_event_animated_thumbnail(
+    ctx: Context,
+    event_id: str,
+    device: str | None = None,
+) -> dict[str, Any]:
+    """Get animated thumbnail (GIF) for a specific event.
+
+    Returns a short animated clip captured around the moment of the event.
+
+    Requires username and password to be configured for the device.
+
+    Args:
+        ctx: MCP context
+        event_id: Event ID (from get_motion_events, get_smart_detections, etc.)
+        device: Device name (optional)
+
+    Returns:
+        Dictionary with base64-encoded GIF and metadata
+    """
+    import base64
+
+    client = _get_protect_client(ctx, device)
+    gif_bytes = await client.get_event_animated_thumbnail(event_id)
+    gif_base64 = base64.b64encode(gif_bytes).decode("utf-8")
+
+    return {
+        "success": True,
+        "event_id": event_id,
+        "image_base64": gif_base64,
+        "image_format": "gif",
+        "note": "Animated thumbnail (GIF) showing a short clip around the event moment.",
+    }

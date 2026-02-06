@@ -448,6 +448,30 @@ async def get_recent_protect_activity(ctx: Context, limit: int = 20, device: str
     return await protect_tools.get_recent_activity(ctx, limit, device)
 
 
+@mcp.tool()
+async def get_event_thumbnail(ctx: Context, event_id: str, device: str | None = None):
+    """
+    Get thumbnail image for a specific event.
+
+    Returns the snapshot captured at the moment of the event (motion, smart detection, etc.).
+    Use event IDs from get_motion_events, get_smart_detections, or get_recent_protect_activity.
+    Requires username and password configured for the Protect device.
+    """
+    return await protect_tools.get_event_thumbnail(ctx, event_id, device)
+
+
+@mcp.tool()
+async def get_event_animated_thumbnail(ctx: Context, event_id: str, device: str | None = None):
+    """
+    Get animated thumbnail (GIF) for a specific event.
+
+    Returns a short animated clip captured around the moment of the event.
+    Use event IDs from get_motion_events, get_smart_detections, or get_recent_protect_activity.
+    Requires username and password configured for the Protect device.
+    """
+    return await protect_tools.get_event_animated_thumbnail(ctx, event_id, device)
+
+
 # =============================================================================
 # Multi-Device Management Tools
 # =============================================================================

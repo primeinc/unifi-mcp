@@ -473,6 +473,55 @@ async def get_event_animated_thumbnail(ctx: Context, event_id: str, device: str 
 
 
 # =============================================================================
+# File-based Image Tools (for local/co-located agents)
+# =============================================================================
+
+
+@mcp.tool()
+async def get_camera_snapshot_file(
+    ctx: Context,
+    camera_id: str,
+    device: str | None = None,
+    width: int | None = None,
+    height: int | None = None,
+):
+    """
+    Get a camera snapshot saved as a local file.
+
+    Saves the image to disk and returns the file path. Use this instead of
+    get_camera_snapshot when the agent runs on the same machine as the MCP
+    server, so it can read the file directly for image rendering.
+    """
+    return await protect_tools.get_camera_snapshot_file(ctx, camera_id, device, width, height)
+
+
+@mcp.tool()
+async def get_event_thumbnail_file(ctx: Context, event_id: str, device: str | None = None):
+    """
+    Get an event thumbnail saved as a local file.
+
+    Saves the image to disk and returns the file path. Use this instead of
+    get_event_thumbnail when the agent runs on the same machine as the MCP
+    server, so it can read the file directly for image rendering.
+    Requires username and password configured for the Protect device.
+    """
+    return await protect_tools.get_event_thumbnail_file(ctx, event_id, device)
+
+
+@mcp.tool()
+async def get_event_animated_thumbnail_file(ctx: Context, event_id: str, device: str | None = None):
+    """
+    Get an event animated thumbnail (GIF) saved as a local file.
+
+    Saves the GIF to disk and returns the file path. Use this instead of
+    get_event_animated_thumbnail when the agent runs on the same machine as
+    the MCP server, so it can read the file directly for image rendering.
+    Requires username and password configured for the Protect device.
+    """
+    return await protect_tools.get_event_animated_thumbnail_file(ctx, event_id, device)
+
+
+# =============================================================================
 # Multi-Device Management Tools
 # =============================================================================
 

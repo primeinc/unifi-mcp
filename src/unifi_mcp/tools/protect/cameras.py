@@ -1,8 +1,13 @@
 """UniFi Protect camera management tools."""
 
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import Context
+
+SNAPSHOT_DIR = Path(os.environ.get("UNIFI_SNAPSHOT_DIR", "/tmp/unifi-protect"))
 
 from unifi_mcp.clients.base import AppContext
 from unifi_mcp.clients.protect import UniFiProtectClient
@@ -531,4 +536,165 @@ async def get_event_animated_thumbnail(
         "image_base64": gif_base64,
         "image_format": "gif",
         "note": "Animated thumbnail (GIF) showing a short clip around the event moment.",
+    }
+
+
+# =============================================================================
+# File-based Image Tools
+#
+# These tools save images to local disk and return file paths instead of
+# base64-encoded data. Use these when the MCP server runs on the same machine
+# as the agent (e.g. Claude Code, OpenCode) so the agent can read the image
+# file directly for rendering. For remote agents, use the base64 variants above.
+# =============================================================================
+
+
+def _save_image(image_bytes: bytes, prefix: str, extension: str) -> str:
+    """Save image bytes to the snapshot directory and return the file path.
+
+    Args:
+        image_bytes: Raw image data
+        prefix: Filename prefix (e.g. camera name or event ID)
+        extension: File extension without dot (e.g. "jpg", "gif")
+
+    Returns:
+        Absolute path to the saved file
+    """
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Sanitize prefix for filesystem
+    safe_prefix = prefix.replace("/", "-").replace(" ", "_").lower()
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    filename = f"{safe_prefix}-{timestamp}.{extension}"
+    filepath = SNAPSHOT_DIR / filename
+    filepath.write_bytes(image_bytes)
+    return str(filepath)
+
+
+async def get_camera_snapshot_file(
+    ctx: Context,
+    camera_id: str,
+    device: str | None = None,
+    width: int | None = None,
+    height: int | None = None,
+) -> dict[str, Any]:
+    """Get a camera snapshot saved as a local file.
+
+    Saves the snapshot to disk and returns the file path. Optimized for agents
+    running on the same machine as this MCP server — the agent can read the
+    file directly to render the image without base64 encoding overhead.
+
+    Requires the agent to have filesystem access to the snapshot directory
+    (default: /tmp/unifi-protect, configurable via UNIFI_SNAPSHOT_DIR).
+
+    Args:
+        ctx: MCP context
+        camera_id: Camera ID or name
+        device: Device name (optional)
+        width: Optional width for resizing
+        height: Optional height for resizing
+
+    Returns:
+        Dictionary with file path and camera metadata
+    """
+    client = _get_protect_client(ctx, device)
+
+    # Find camera (by ID or name)
+    try:
+        camera = await client.get_camera(camera_id)
+    except UniFiNotFoundError:
+        camera = await client.get_camera_by_name(camera_id)
+
+    actual_id = camera.get("id")
+    if not actual_id:
+        raise ValueError(f"Could not find camera: {camera_id}")
+
+    if camera.get("state") != "CONNECTED":
+        return {
+            "success": False,
+            "error": f"Camera '{camera.get('name')}' is not connected (state: {camera.get('state')})",
+            "camera_id": actual_id,
+            "camera_name": camera.get("name"),
+        }
+
+    image_bytes = await client.get_camera_snapshot(actual_id, width, height)
+    camera_name = camera.get("name", actual_id)
+    filepath = _save_image(image_bytes, f"snapshot-{camera_name}", "jpg")
+
+    return {
+        "success": True,
+        "camera_id": actual_id,
+        "camera_name": camera_name,
+        "image_path": filepath,
+        "image_format": "jpeg",
+    }
+
+
+async def get_event_thumbnail_file(
+    ctx: Context,
+    event_id: str,
+    device: str | None = None,
+) -> dict[str, Any]:
+    """Get an event thumbnail saved as a local file.
+
+    Saves the event snapshot to disk and returns the file path. Optimized for
+    agents running on the same machine as this MCP server — the agent can read
+    the file directly to render the image without base64 encoding overhead.
+
+    Requires username and password configured for the Protect device.
+    Requires the agent to have filesystem access to the snapshot directory
+    (default: /tmp/unifi-protect, configurable via UNIFI_SNAPSHOT_DIR).
+
+    Args:
+        ctx: MCP context
+        event_id: Event ID (from get_motion_events, get_smart_detections, etc.)
+        device: Device name (optional)
+
+    Returns:
+        Dictionary with file path and event metadata
+    """
+    client = _get_protect_client(ctx, device)
+    image_bytes = await client.get_event_thumbnail(event_id)
+    filepath = _save_image(image_bytes, f"event-{event_id}", "jpg")
+
+    return {
+        "success": True,
+        "event_id": event_id,
+        "image_path": filepath,
+        "image_format": "jpeg",
+    }
+
+
+async def get_event_animated_thumbnail_file(
+    ctx: Context,
+    event_id: str,
+    device: str | None = None,
+) -> dict[str, Any]:
+    """Get an event animated thumbnail (GIF) saved as a local file.
+
+    Saves the animated clip to disk and returns the file path. Optimized for
+    agents running on the same machine as this MCP server — the agent can read
+    the file directly to render the image without base64 encoding overhead.
+
+    Requires username and password configured for the Protect device.
+    Requires the agent to have filesystem access to the snapshot directory
+    (default: /tmp/unifi-protect, configurable via UNIFI_SNAPSHOT_DIR).
+
+    Args:
+        ctx: MCP context
+        event_id: Event ID (from get_motion_events, get_smart_detections, etc.)
+        device: Device name (optional)
+
+    Returns:
+        Dictionary with file path and event metadata
+    """
+    client = _get_protect_client(ctx, device)
+    gif_bytes = await client.get_event_animated_thumbnail(event_id)
+    filepath = _save_image(gif_bytes, f"event-anim-{event_id}", "gif")
+
+    return {
+        "success": True,
+        "event_id": event_id,
+        "image_path": filepath,
+        "image_format": "gif",
     }

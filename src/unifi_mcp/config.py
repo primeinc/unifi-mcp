@@ -231,6 +231,16 @@ class UniFiSettings(BaseSettings):
         return base
 
     @property
+    def auth_url(self) -> str:
+        """Get the authentication URL for session-based auth."""
+        if not self.controller_url:
+            raise ValueError("No controller URL configured")
+        base = self.controller_url.rstrip("/")
+        if self.is_udm:
+            return f"{base}/api/auth/login"
+        return f"{base}/api/login"
+
+    @property
     def uses_api_key(self) -> bool:
         """Check if using API key authentication."""
         return self.mode in ("cloud", "local_api_key")

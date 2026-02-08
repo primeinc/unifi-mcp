@@ -107,6 +107,8 @@ class UniFiLocalAuth:
             data = response.json()
             error_msg = data.get("meta", {}).get("msg", "Unknown error")
             raise UniFiAuthError(f"Authentication failed: {error_msg}")
+        except UniFiAuthError:
+            raise
         except Exception:
             raise UniFiAuthError(f"Authentication failed with status {response.status_code}")
 
@@ -115,7 +117,7 @@ class UniFiLocalAuth:
         if not self._is_authenticated:
             return
 
-        base_url = self.settings.controller_url.rstrip("/")
+        base_url = self.settings.controller_url.rstrip("/") if self.settings.controller_url else ""
 
         if self.settings.is_udm:
             logout_url = f"{base_url}/api/auth/logout"

@@ -58,6 +58,7 @@ async def test_analyze_network_issues_complex(mock_mcp_context):
         mock_client.get_clients = AsyncMock(return_value=clients)
         mock_client.get_site_health = AsyncMock(return_value=health)
         mock_client.get_alarms = AsyncMock(return_value=alarms)
+        mock_client.get_events = AsyncMock(return_value=[])
         mock_client_class.return_value = mock_client
 
         result = await analyze_network_issues(mock_mcp_context)

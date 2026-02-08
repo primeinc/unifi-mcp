@@ -19,6 +19,7 @@ async def test_analyze_network_issues_tool(mock_mcp_context):
         mock_client.get_clients = AsyncMock(return_value=clients)
         mock_client.get_site_health = AsyncMock(return_value=health)
         mock_client.get_alarms = AsyncMock(return_value=alarms)
+        mock_client.get_events = AsyncMock(return_value=[])
 
         insights_module.UniFiNetworkClient = MagicMock(return_value=mock_client)
 

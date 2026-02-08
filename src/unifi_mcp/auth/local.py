@@ -1,7 +1,6 @@
 """Local controller authentication for UniFi OS and traditional controllers."""
 
 import logging
-from typing import Any
 
 import httpx
 

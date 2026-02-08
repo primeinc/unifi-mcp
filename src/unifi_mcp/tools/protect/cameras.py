@@ -7,12 +7,12 @@ from typing import Any
 
 from mcp.server.fastmcp import Context
 
-SNAPSHOT_DIR = Path(os.environ.get("UNIFI_SNAPSHOT_DIR", "/tmp/unifi-protect"))
-
 from unifi_mcp.clients.base import AppContext
 from unifi_mcp.clients.protect import UniFiProtectClient
 from unifi_mcp.config import settings
 from unifi_mcp.exceptions import UniFiNotFoundError
+
+SNAPSHOT_DIR = Path(os.environ.get("UNIFI_SNAPSHOT_DIR", "/tmp/unifi-protect"))
 
 
 def _get_protect_client(ctx: Context, device_name: str | None = None) -> UniFiProtectClient:

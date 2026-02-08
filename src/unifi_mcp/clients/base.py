@@ -24,6 +24,7 @@ from unifi_mcp.exceptions import (
     UniFiConnectionError,
     UniFiRateLimitError,
 )
+from unifi_mcp.utils.privacy import mask_pii_data
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +150,8 @@ class UniFiHTTPClient:
         if response.status_code >= 400:
             await self._handle_error_response(response)
 
-        return self._parse_response(response)
+        data = self._parse_response(response)
+        return mask_pii_data(data)
 
     async def get(self, endpoint: str, **kwargs: Any) -> dict[str, Any]:
         """Make a GET request."""

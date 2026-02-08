@@ -20,12 +20,21 @@ class UniFiDevice(BaseModel):
         default=["network"],
         description="Services available on this device",
     )
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        """Ensure URL is valid and uses http/https."""
+        v = v.strip().rstrip("/")
+        if not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return v
     site: str = Field(
         default="default",
         description="Site name for network operations",
     )
     verify_ssl: bool = Field(
-        default=False,
+        default=True,
         description="Verify SSL certificates",
     )
     # Optional credentials for full Protect API access (events, recordings)
@@ -109,13 +118,21 @@ class UniFiSettings(BaseSettings):
     username: str | None = Field(default=None)
     password: str | None = Field(default=None)
     site: str = Field(default="default")
-    verify_ssl: bool = Field(default=False)
+    verify_ssl: bool = Field(default=True)
     is_udm: bool = Field(default=True)
 
     # Performance settings
     request_timeout: float = Field(default=30.0)
     max_connections: int = Field(default=10)
     cache_ttl: int = Field(default=30)
+    poor_signal_threshold: int = Field(
+        default=-75,
+        description="RSSI threshold below which a wireless client is considered to have poor signal",
+    )
+    mask_pii: bool = Field(
+        default=False,
+        description="Enable masking of PII (MAC addresses, IPs, hostnames) in logs and tool outputs",
+    )
 
     # Default device name for legacy config
     default_device_name: str = Field(

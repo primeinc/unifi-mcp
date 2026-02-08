@@ -1,37 +1,31 @@
-[tool.poetry]
+[project]
 name = "unifi-mcp"
 version = "0.1.0"
 description = "MCP server for UniFi Network and Protect API integration"
 readme = "README.md"
-license = "MIT"
-authors = ["UniFi MCP"]
+authors = [{name = "UniFi MCP"}]
+license = {text = "MIT"}
 keywords = ["mcp", "unifi", "ubiquiti", "network", "automation"]
-packages = [{include = "unifi_mcp", from = "src"}]
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.9.0",
+    "httpx>=0.28.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "tenacity>=8.0.0",
+    "cachetools>=5.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-mcp = "^1.9.0"
-httpx = "^0.28.0"
-pydantic = "^2.0"
-pydantic-settings = "^2.0"
-tenacity = "^8.0.0"
-cachetools = "^5.0.0"
+[project.optional-dependencies]
+protect = [
+    "uiprotect>=6.0.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0.0"
-pytest-asyncio = "^0.24.0"
-respx = "^0.21.0"
-ruff = "^0.8.0"
-
-[tool.poetry.group.protect.dependencies]
-uiprotect = {version = "^6.0.0", optional = true}
-
-[tool.poetry.scripts]
+[project.scripts]
 unifi-mcp = "unifi_mcp.server:main"
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.hatch.build.targets.wheel]
+packages = ["src/unifi_mcp"]
 
 [tool.ruff]
 line-length = 100
@@ -44,3 +38,20 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "respx>=0.21.0",
+    "ruff>=0.8.0",
+    "pytest-cov>=4.0.0",
+    "pyright>=1.1.408",
+]
+
+[tool.uv]
+default-groups = ["dev"]

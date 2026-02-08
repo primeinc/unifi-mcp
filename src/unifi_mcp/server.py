@@ -7,6 +7,8 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from unifi_mcp.clients.base import create_app_lifespan
 from unifi_mcp.config import settings
+from unifi_mcp.utils import setup_logging
+from unifi_mcp.utils.privacy import mask_pii_data
 from unifi_mcp.tools.network import clients as client_tools
 from unifi_mcp.tools.network import devices as device_tools
 from unifi_mcp.tools.network import insights as insight_tools
@@ -20,6 +22,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stderr,
 )
+setup_logging()
 logger = logging.getLogger(__name__)
 
 # Create the MCP server with lifespan management

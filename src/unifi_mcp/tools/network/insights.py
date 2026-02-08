@@ -6,6 +6,7 @@ from mcp.server.fastmcp import Context
 
 from unifi_mcp.clients.base import AppContext
 from unifi_mcp.clients.network import UniFiNetworkClient
+from unifi_mcp.config import settings
 
 
 def _get_client(ctx: Context) -> UniFiNetworkClient:
@@ -35,7 +36,8 @@ async def analyze_network_issues(ctx: Context, site: str = "default") -> dict[st
     clients = await client.get_clients(site)
     health = await client.get_site_health(site)
     alarms = await client.get_alarms(site)
-    events = await client.get_events(100, site)
+    # We don't use events directly yet but keep it for future use as upstream added it
+    _ = await client.get_events(100, site)
 
     issues = []
     warnings = []
@@ -104,7 +106,7 @@ async def analyze_network_issues(ctx: Context, site: str = "default") -> dict[st
         if not c.get("is_wired"):
             rssi = c.get("rssi")
             signal = c.get("signal")
-            if rssi and rssi < -75:
+            if rssi and rssi < settings.poor_signal_threshold:
                 poor_signal_clients.append({
                     "name": c.get("name") or c.get("hostname") or c.get("mac"),
                     "rssi": rssi,
@@ -414,7 +416,7 @@ async def get_client_experience_report(
         if c.get("tx_retries", 0) > 100:
             issues.append(f"High TX retries: {c.get('tx_retries')}")
 
-        if c.get("rssi") and c.get("rssi") < -75:
+        if c.get("rssi") and c.get("rssi") < settings.poor_signal_threshold:
             issues.append(f"Weak signal: {c.get('rssi')} dBm")
 
         if issues:
@@ -715,7 +717,7 @@ async def troubleshoot_client(
         }
 
         # Check for issues
-        if rssi and rssi < -75:
+        if rssi and rssi < settings.poor_signal_threshold:
             report["issues_detected"].append({
                 "issue": "Weak signal strength",
                 "details": f"RSSI: {rssi} dBm (should be > -70 dBm)",

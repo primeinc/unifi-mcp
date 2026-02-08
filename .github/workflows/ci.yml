@@ -87,7 +87,7 @@ jobs:
         run: poetry install --no-interaction
         
       - name: Run tests with pytest
-        run: poetry run pytest -v --cov=src/unifi_mcp --cov-report=xml --cov-report=term
+        run: poetry run pytest -v --cov=src/unifi_mcp --cov-report=xml --cov-report=term --cov-fail-under=60
         
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

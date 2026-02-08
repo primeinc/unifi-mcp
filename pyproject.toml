@@ -94,4 +94,4 @@ max-attributes = 10
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-v --cov=src/unifi_mcp --cov-report=term-missing --cov-report=xml"
+addopts = "-v --cov=src/unifi_mcp --cov-report=term-missing --cov-report=xml --cov-fail-under=60"

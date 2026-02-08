@@ -261,6 +261,8 @@ async def create_app_lifespan(
     device = settings.get_device()
     if device and device.has_protect_credentials:
         # Multi-device mode with credentials: use session auth
+        # Note: Mutating settings is acceptable here since this runs once at app startup
+        # and settings.get_device() returns the first/default device
         # Populate legacy settings from device so UniFiLocalAuth works
         settings.controller_url = device.url
         settings.username = device.username

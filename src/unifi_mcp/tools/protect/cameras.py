@@ -1,6 +1,8 @@
 """UniFi Protect camera management tools."""
 
+import base64
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -524,8 +526,6 @@ async def get_event_animated_thumbnail(
     Returns:
         Dictionary with base64-encoded GIF and metadata
     """
-    import base64
-
     client = _get_protect_client(ctx, device)
     gif_bytes = await client.get_event_animated_thumbnail(event_id)
     gif_base64 = base64.b64encode(gif_bytes).decode("utf-8")
@@ -562,8 +562,13 @@ def _save_image(image_bytes: bytes, prefix: str, extension: str) -> str:
     """
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Sanitize prefix for filesystem
-    safe_prefix = prefix.replace("/", "-").replace(" ", "_").lower()
+    # Sanitize prefix for filesystem - remove any path separators and unsafe characters
+    # Keep only alphanumeric, dash, underscore, and space
+    safe_prefix = re.sub(r'[^\w\s-]', '', prefix).strip()
+    safe_prefix = re.sub(r'[\s]+', '_', safe_prefix).lower()
+    # Limit length to avoid filesystem issues
+    safe_prefix = safe_prefix[:100]
+
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     filename = f"{safe_prefix}-{timestamp}.{extension}"
     filepath = SNAPSHOT_DIR / filename

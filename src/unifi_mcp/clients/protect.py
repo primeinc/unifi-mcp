@@ -73,11 +73,20 @@ class UniFiProtectClient:
         """Ensure session authentication is established.
 
         Required for events and recordings access.
+        Reuses existing session cookies from the shared HTTP client if available.
 
         Raises:
             UniFiAuthError: If credentials not configured or auth fails
         """
         if self._session_authenticated:
+            return
+
+        # Check if the shared HTTP client already has session cookies
+        # (e.g., from lifespan session auth in base.py)
+        auth_cookies = [c for c in self.client.cookies.jar if "TOKEN" in c.name.upper() or "CSRF" in c.name.upper()]
+        if auth_cookies:
+            self._session_authenticated = True
+            logger.info("Reusing existing session authentication for Protect")
             return
 
         if not self.device.has_protect_credentials:

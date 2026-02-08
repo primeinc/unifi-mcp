@@ -257,11 +257,26 @@ async def create_app_lifespan(
         verify=settings.verify_ssl,
     )
 
-    # Initialize auth based on mode
-    if settings.uses_api_key:
+    # Initialize auth based on configured devices or legacy mode
+    device = settings.get_device()
+    if device and device.has_protect_credentials:
+        # Multi-device mode with credentials: use session auth
+        # Populate legacy settings from device so UniFiLocalAuth works
+        settings.controller_url = device.url
+        settings.username = device.username
+        settings.password = device.password
+        settings.is_udm = True
+        settings.mode = "local"
+        auth: UniFiLocalAuth | UniFiCloudAuth = UniFiLocalAuth(client, settings)
+        logger.info(f"Using device session authentication for {device.name} ({device.url})")
+    elif device:
+        # Multi-device mode without credentials: use API key
+        auth = UniFiCloudAuth(device.api_key)
+        logger.info(f"Using device API key authentication for {device.name} ({device.url})")
+    elif settings.uses_api_key:
         if not settings.cloud_api_key:
             raise UniFiAuthError("API key is required for cloud/local_api_key mode")
-        auth: UniFiLocalAuth | UniFiCloudAuth = UniFiCloudAuth(settings.cloud_api_key)
+        auth = UniFiCloudAuth(settings.cloud_api_key)
         if settings.mode == "cloud":
             logger.info("Using cloud authentication (api.ui.com)")
         else:

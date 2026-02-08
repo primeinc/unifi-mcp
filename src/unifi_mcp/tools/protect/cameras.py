@@ -560,7 +560,9 @@ def _save_image(image_bytes: bytes, prefix: str, extension: str) -> str:
     Returns:
         Absolute path to the saved file
     """
-    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    # Ensure SNAPSHOT_DIR is resolved to an absolute path
+    snapshot_dir_abs = SNAPSHOT_DIR.resolve()
+    snapshot_dir_abs.mkdir(parents=True, exist_ok=True)
 
     # Sanitize prefix for filesystem - remove any path separators and unsafe characters
     # Keep only alphanumeric, dash, and underscore
@@ -571,7 +573,7 @@ def _save_image(image_bytes: bytes, prefix: str, extension: str) -> str:
 
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     filename = f"{safe_prefix}-{timestamp}.{extension}"
-    filepath = SNAPSHOT_DIR / filename
+    filepath = snapshot_dir_abs / filename
     filepath.write_bytes(image_bytes)
     return str(filepath)
 

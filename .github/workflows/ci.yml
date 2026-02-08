@@ -46,7 +46,7 @@ jobs:
         run: poetry run black --check .
         
       - name: Run Pylint
-        run: poetry run pylint src/unifi_mcp --rcfile=pyproject.toml || true
+        run: poetry run pylint src/unifi_mcp --rcfile=pyproject.toml
         
       - name: Run Mypy type checker
         run: poetry run mypy src/unifi_mcp

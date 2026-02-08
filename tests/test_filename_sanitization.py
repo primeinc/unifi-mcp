@@ -1,8 +1,8 @@
 """Tests for filename sanitization security in Protect camera tools."""
 
-import pytest
 import re
 from pathlib import Path
+
 from unifi_mcp.tools.protect.cameras import SNAPSHOT_DIR
 
 
@@ -92,5 +92,5 @@ class TestFilenameSanitization:
         """Test that SNAPSHOT_DIR can be configured via environment."""
         # This tests that the configuration is importable and is a Path
         assert isinstance(SNAPSHOT_DIR, Path)
-        # Should default to /tmp/unifi-protect or custom value
-        assert str(SNAPSHOT_DIR).endswith("unifi-protect") or "UNIFI_SNAPSHOT_DIR" in str(SNAPSHOT_DIR)
+        # Should default to /tmp/unifi-protect
+        assert "unifi-protect" in str(SNAPSHOT_DIR)

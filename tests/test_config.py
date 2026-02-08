@@ -1,7 +1,7 @@
 """Tests for config module and authentication setup."""
 
 import pytest
-from unittest.mock import Mock, patch
+
 from unifi_mcp.config import UniFiSettings
 
 

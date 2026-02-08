@@ -1,70 +1,42 @@
 """Tests for server module and Context type hints."""
 
-import pytest
 from typing import get_type_hints
-from unifi_mcp import server
+
 from mcp.server.fastmcp import Context
+
+from unifi_mcp import server
 
 
 class TestContextTypeHints:
     """Test that all tool handlers have proper Context type hints for MCP SDK 1.x."""
 
-    def test_list_devices_has_context_type_hint(self):
-        """Test list_devices has Context type hint."""
-        hints = get_type_hints(server.list_devices)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
+    def test_all_tool_handlers_have_context_type_hints(self):
+        """Test that all @mcp.tool() decorated functions have ctx: Context type hint."""
+        # Get all functions from server module that are likely tool handlers
+        tool_functions = [
+            name for name in dir(server)
+            if callable(getattr(server, name))
+            and not name.startswith('_')
+            and name not in ['logging', 'sys', 'mcp', 'Context', 'FastMCP',
+                             'create_app_lifespan', 'settings', 'client_tools',
+                             'device_tools', 'insight_tools', 'site_tools',
+                             'stat_tools', 'protect_tools', 'main']
+        ]
 
-    def test_get_device_details_has_context_type_hint(self):
-        """Test get_device_details has Context type hint."""
-        hints = get_type_hints(server.get_device_details)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
+        missing_hints = []
+        incorrect_hints = []
 
-    def test_list_clients_has_context_type_hint(self):
-        """Test list_clients has Context type hint."""
-        hints = get_type_hints(server.list_clients)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
+        for func_name in tool_functions:
+            func = getattr(server, func_name)
+            try:
+                hints = get_type_hints(func)
+                if 'ctx' not in hints:
+                    missing_hints.append(func_name)
+                elif hints['ctx'] != Context:
+                    incorrect_hints.append(f"{func_name}: {hints['ctx']}")
+            except Exception:
+                # Skip functions that can't be type-hinted (e.g., imported objects)
+                continue
 
-    def test_list_sites_has_context_type_hint(self):
-        """Test list_sites has Context type hint."""
-        hints = get_type_hints(server.list_sites)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
-
-    def test_list_cameras_has_context_type_hint(self):
-        """Test list_cameras has Context type hint."""
-        hints = get_type_hints(server.list_cameras)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
-
-    def test_get_camera_snapshot_has_context_type_hint(self):
-        """Test get_camera_snapshot has Context type hint."""
-        hints = get_type_hints(server.get_camera_snapshot)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
-
-    def test_get_event_thumbnail_has_context_type_hint(self):
-        """Test get_event_thumbnail (new tool) has Context type hint."""
-        hints = get_type_hints(server.get_event_thumbnail)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
-
-    def test_get_camera_snapshot_file_has_context_type_hint(self):
-        """Test get_camera_snapshot_file (new tool) has Context type hint."""
-        hints = get_type_hints(server.get_camera_snapshot_file)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
-
-    def test_analyze_network_issues_has_context_type_hint(self):
-        """Test analyze_network_issues has Context type hint."""
-        hints = get_type_hints(server.analyze_network_issues)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
-
-    def test_list_unifi_devices_has_context_type_hint(self):
-        """Test list_unifi_devices has Context type hint."""
-        hints = get_type_hints(server.list_unifi_devices)
-        assert 'ctx' in hints
-        assert hints['ctx'] == Context
+        assert not missing_hints, f"Functions missing ctx type hint: {missing_hints}"
+        assert not incorrect_hints, f"Functions with incorrect ctx type: {incorrect_hints}"

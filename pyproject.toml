@@ -20,8 +20,13 @@ cachetools = "^5.0.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 pytest-asyncio = "^0.24.0"
+pytest-cov = "^6.0.0"
 respx = "^0.21.0"
 ruff = "^0.8.0"
+pylint = "^3.0.0"
+mypy = "^1.8.0"
+black = "^24.0.0"
+types-cachetools = "^5.0.0"
 
 [tool.poetry.group.protect.dependencies]
 uiprotect = {version = "^6.0.0", optional = true}
@@ -34,13 +39,59 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
-ignore = ["E501"]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "PL"]
+ignore = ["E501", "PLR0913", "PLR2004"]
+
+[tool.black]
+line-length = 120
+target-version = ["py311", "py312"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "normal"
+ignore_missing_imports = true
+strict_optional = true
+
+[tool.pylint.main]
+py-version = "3.11"
+ignore-patterns = ["conftest", "setup"]
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "fixme",
+    "invalid-name",
+    "duplicate-code",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-instance-attributes",
+]
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.design]
+max-locals = 25
+max-branches = 20
+max-attributes = 10
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "-v --cov=src/unifi_mcp --cov-report=term-missing --cov-report=xml"

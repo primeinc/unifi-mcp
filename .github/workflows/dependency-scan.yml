@@ -1,0 +1,36 @@
+name: "Dependency Security Scan"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight
+
+jobs:
+  pip-audit:
+    name: Scan Python Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          
+      - name: Export requirements
+        run: poetry export -f requirements.txt --output requirements.txt --without-hashes
+        
+      - name: Run pip-audit
+        uses: pypa/gh-action-pip-audit@v1.0.8
+        with:
+          inputs: requirements.txt
+          # Fail on high or critical vulnerabilities
+          vulnerability-service: osv

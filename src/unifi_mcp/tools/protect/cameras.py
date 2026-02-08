@@ -563,9 +563,9 @@ def _save_image(image_bytes: bytes, prefix: str, extension: str) -> str:
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Sanitize prefix for filesystem - remove any path separators and unsafe characters
-    # Keep only alphanumeric, dash, underscore, and space
-    safe_prefix = re.sub(r'[^\w\s-]', '', prefix).strip()
-    safe_prefix = re.sub(r'[\s]+', '_', safe_prefix).lower()
+    # Keep only alphanumeric, dash, and underscore
+    safe_prefix = re.sub(r'[^\w-]', '', prefix).strip()
+    safe_prefix = re.sub(r'[-]+', '-', safe_prefix).lower()
     # Limit length to avoid filesystem issues
     safe_prefix = safe_prefix[:100]
 

@@ -35,7 +35,6 @@ async def analyze_network_issues(ctx: Context, site: str = "default") -> dict[st
     clients = await client.get_clients(site)
     health = await client.get_site_health(site)
     alarms = await client.get_alarms(site)
-    events = await client.get_events(100, site)
 
     issues = []
     warnings = []
@@ -225,7 +224,7 @@ async def get_optimization_recommendations(
     for device in devices:
         if device.get("type") == "uap":
             for radio in device.get("radio_table", []):
-                if radio.get("channel") and not radio.get("channel") == "auto":
+                if radio.get("channel") and radio.get("channel") != "auto":
                     recommendations.append({
                         "category": "wireless",
                         "priority": "medium",

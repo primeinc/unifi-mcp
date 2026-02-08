@@ -26,7 +26,7 @@ def _format_client_summary(client: dict[str, Any]) -> dict[str, Any]:
         "ip": client.get("ip", ""),
         "connection_type": connection_type,
         "network": client.get("network", ""),
-        "vlan": client.get("vlan", None),
+        "vlan": client.get("vlan"),
         "connected": client.get("is_online", True),
         "uptime": client.get("uptime", 0),
         "last_seen": client.get("last_seen", 0),

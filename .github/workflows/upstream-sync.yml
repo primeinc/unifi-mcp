@@ -11,13 +11,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Sync Upstream
-        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+      - name: Checkout target branch
+        uses: actions/checkout@v4
         with:
-          target_sync_branch: upstream-main
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-          upstream_sync_branch: main
-          upstream_sync_repo: gbassaragh/Unifi-mcp
-          
-          # Set test_mode true to run without pushing
-          test_mode: false
+          ref: upstream-main
+
+      - name: Sync with Upstream using GitHub CLI
+        run: |
+          gh repo sync ${{ github.repository }} --source gbassaragh/Unifi-mcp --branch main --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
